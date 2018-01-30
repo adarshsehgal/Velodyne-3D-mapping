@@ -44,13 +44,13 @@ add_executable(transformMaintenance src/transform_maintenance_node.cpp)
 target_link_libraries(transformMaintenance ${catkin_LIBRARIES} ${PCL_LIBRARIES} loam )
 
 add_executable(VirtualTarget_tf_broadcaste src/VirtualTarget_tf_broadcaste.cpp)
-target_link_libraries(VirtualTarget_tf_broadcaste ${catkin_LIBRARIES})
+target_link_libraries(VirtualTarget_tf_broadcaster ${catkin_LIBRARIES})
 
 add_executable(Robot_tf_broadcaste src/Robot_tf_broadcaste.cpp)
-target_link_libraries(Robot_tf_broadcaste ${catkin_LIBRARIES})
+target_link_libraries(Robot_tf_broadcaster ${catkin_LIBRARIES})
 
 add_executable(potential_fiel src/potential_fiel.cpp)
-target_link_libraries(potential_fiel
+target_link_libraries(potential_field
   ${catkin_LIBRARIES}
 )
 

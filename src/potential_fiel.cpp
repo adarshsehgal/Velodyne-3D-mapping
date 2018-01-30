@@ -1,0 +1,175 @@
+#include <iostream>
+#include <ros/ros.h>
+#include <std_msgs/String.h>
+#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Point.h>
+#include <tf/transform_listener.h>
+#include <nav_msgs/Odometry.h>
+#include <time.h>
+#include <stdio.h>
+#include <math.h>
+
+#define PI 3.14159265
+
+struct OdomData
+{
+    double x;
+    double y;
+    double heading;
+};
+
+class RobotDriver
+{
+	private:
+	  
+	  ros::NodeHandle nh_;
+
+	  ros::Subscriber odom_pub;
+          ros::Subscriber virtual_point_sub;
+
+	public:
+          ros::Publisher cmd_vel_pub_;
+          ros::Publisher ready_to_track_pub;
+          void OdomCallback(const nav_msgs::Odometry::ConstPtr & odomsg);
+          void VirtualPointCallback(const geometry_msgs::Point::ConstPtr & pointmsg);
+	  //! ROS node initialization
+	  RobotDriver(ros::NodeHandle &nh)
+	  {
+	    nh_ = nh;
+	    cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/summit_xl_control/cmd_vel", 1);         
+            odom_pub = nh_.subscribe("/summit_xl_control/odom", 1, &RobotDriver::OdomCallback,this); ///RosAria/pose
+            virtual_point_sub = nh_.subscribe("/virtualposition", 1, &RobotDriver::VirtualPointCallback,this);
+            ready_to_track_pub = nh_.advertise<std_msgs::String>("/readytotrack", 1);
+
+          }
+          double Angle;
+          double RobotHeading;
+          struct OdomData OdomDataJR2;
+          struct OdomData VirtualVehicle;
+          bool Wantstotrack;
+
+      void GoToPoint(struct OdomData RobotPos,struct OdomData VirtualVehiclePos)
+      {
+          double arcsin,arctan,roboh;
+          arctan = atan2((RobotPos.y - VirtualVehiclePos.y),(RobotPos.x - VirtualVehiclePos.x));
+          arctan = arctan * 180 / PI;
+          roboh = RobotPos.heading * 180 /PI;
+          ROS_INFO("Heading of robot %f Relative heading %f \n", roboh,arctan);
+      }
+};
+
+void RobotDriver::OdomCallback(const nav_msgs::Odometry::ConstPtr& odomsg)
+{
+    OdomDataJR2.x = odomsg->pose.pose.position.x;
+    OdomDataJR2.y = odomsg->pose.pose.position.y;
+}
+
+void RobotDriver::VirtualPointCallback(const geometry_msgs::Point::ConstPtr & pointmsg)
+{
+    VirtualVehicle.x = pointmsg->x;
+    VirtualVehicle.y = pointmsg->y;
+    GoToPoint(OdomDataJR2,VirtualVehicle);
+}
+
+//***********MAIN PROGRAM OF THE PATH PLANNING USING ODOMETRY**************
+int main(int argc, char** argv) 
+{
+	  //init the ROS node
+	  ros::init(argc, argv, "robot_driver");
+	  ros::NodeHandle nh;
+	  RobotDriver driver(nh);
+          ros::Rate rate(20.0);
+
+          // publish message to tell the target that robot is ready to track
+          std_msgs::String msg;
+          std::stringstream ss;
+          ss << "track";
+          msg.data = ss.str();
+          //driver.ready_to_track_pub.publish(msg);
+
+          double velangular;
+          double vellinear;
+          double relative_heading_seekur_target;
+          double relative_distance_seekur_target;
+          double heading_target;
+          double distance_fake;
+          tf::TransformListener listener;
+          geometry_msgs::Twist base_cmd;
+          while (nh.ok()){
+            driver.ready_to_track_pub.publish(msg);
+            tf::StampedTransform transform;
+            // find out the heading of the target
+            try{
+              
+	      listener.lookupTransform("/VirtualTarget", "/world",
+                                       ros::Time(0), transform);
+
+               }
+            catch (tf::TransformException ex){
+              ROS_ERROR("%s",ex.what());
+            }
+            heading_target = atan2(transform.getOrigin().y(),
+                                        transform.getOrigin().x());
+            distance_fake = sqrt(pow(transform.getOrigin().x(), 2) +
+                                         pow(transform.getOrigin().y(), 2));
+
+
+            // find out the relative heading & distance of robot to target
+            try{
+		
+              listener.lookupTransform("/JR2", "/VirtualTarget",
+                                       ros::Time(0), transform);
+
+               }
+            catch (tf::TransformException ex){
+		
+              ROS_ERROR("%s",ex.what());
+            }
+            relative_heading_seekur_target = atan2(transform.getOrigin().y(),
+                                        transform.getOrigin().x());
+            relative_distance_seekur_target = sqrt(pow(transform.getOrigin().x(), 2) +
+                                         pow(transform.getOrigin().y(), 2));
+
+            // Calculate the heading control
+            double Theta_R;
+            double a,b;
+            double Pmt,Pr;
+            double debug;
+            double heading_input;
+            double speed_input;
+            Pmt = 0.15;
+            Pr = 1;
+            a = Pmt * sin(heading_target - relative_heading_seekur_target);
+            b = Pr;
+            debug = asin(a);
+            Theta_R = relative_heading_seekur_target + asin(a/b);
+            
+            heading_input = Theta_R/3;
+            speed_input = 0.11;
+
+            // For safety reason, the maximum angular speed is 0.15;
+            if (heading_input < -0.15 || heading_input > 0.15)
+            {
+                ROS_INFO("angular speed is exceeding the maximum value");
+                if (heading_input > 0)
+                {
+                    heading_input = 0.15;
+                }
+                else
+                {
+                    heading_input = -0.15;
+                }
+            }
+
+	    ROS_INFO("Robot Heading: %f \n", heading_input);
+            base_cmd.angular.z = heading_input;
+            base_cmd.linear.x = speed_input;
+	    
+	    driver.cmd_vel_pub_.publish(base_cmd);
+            
+            rate.sleep();
+            ros::spinOnce();
+          }
+
+}
+
