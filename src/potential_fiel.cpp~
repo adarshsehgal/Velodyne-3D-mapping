@@ -162,7 +162,6 @@ int main(int argc, char** argv)
             }
 
 	    ROS_INFO("Robot Heading: %f \n", heading_input);
-	    ROS_INFO("Robot speed: %f \n", speed_input);
             base_cmd.angular.z = heading_input;
             base_cmd.linear.x = speed_input;
 	    

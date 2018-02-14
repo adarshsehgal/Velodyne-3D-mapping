@@ -20,7 +20,10 @@ int main(int argc, char** argv){
     odom.pose.pose.position.y = 1.0*cos(ros::Time::now().toSec());
     virtualposition_pub.publish(odom);
 	
-    transform.setOrigin( tf::Vector3(0.0, 0.5*sin(ros::Time::now().toSec()), 0.5*cos(ros::Time::now().toSec())) );
+    //transform.setOrigin( tf::Vector3(0.5*sin(ros::Time::now().toSec()), 0.5*cos(ros::Time::now().toSec()), 0.0) );
+
+transform.setOrigin( tf::Vector3(2.0,0.0, -2.0) );
+
     transform.setRotation( tf::Quaternion(0, 0, 0, 1) );
     br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "camera_init", "VirtualTarget"));
     rate.sleep();

@@ -231,8 +231,8 @@ void TransformMaintenance::odomAftMappedHandler(const nav_msgs::Odometry::ConstP
   _transformAftMapped[5] = odomAftMapped->pose.pose.position.z;
 
   _transformBefMapped[0] = odomAftMapped->twist.twist.angular.x;
-  _transformBefMapped[1] = odomAftMapped->twist.twist.angular.y;
-  _transformBefMapped[2] = odomAftMapped->twist.twist.angular.z;
+  _transformBefMapped[1] = odomAftMapped->twist.twist.angular.z;
+  _transformBefMapped[2] = odomAftMapped->twist.twist.angular.y;
 
   _transformBefMapped[3] = odomAftMapped->twist.twist.linear.x;
   _transformBefMapped[4] = odomAftMapped->twist.twist.linear.y;

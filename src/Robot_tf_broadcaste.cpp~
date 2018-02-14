@@ -36,7 +36,7 @@ void poseCallback(const nav_msgs::Odometry::ConstPtr& msg)
 int main(int argc, char** argv){
 	ros::init(argc, argv, "my_tf_broadcaster");
 	ros::NodeHandle node;
-	ros:: Subscriber sub = node.subscribe("/summit_xl_control/odom", 10, &poseCallback);  //turtle1/pose
+	ros:: Subscriber sub = node.subscribe("summit_xl_control/odom", 10, &poseCallback);  //turtle1/pose
 
 	ros::spin();
 	return 0;
